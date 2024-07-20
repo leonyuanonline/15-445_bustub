@@ -106,12 +106,11 @@ class Trie {
   // The root of the trie.
   std::shared_ptr<const TrieNode> root_{nullptr};
 
-  // Create a new trie with the given root.
-  explicit Trie(std::shared_ptr<const TrieNode> root) : root_(std::move(root)) {}
-
  public:
   // Create an empty trie.
   Trie() = default;
+  // Create a new trie with the given root.
+  explicit Trie(std::shared_ptr<const TrieNode> root) : root_(std::move(root)) {}
 
   // Get the value associated with the given key.
   // 1. If the key is not in the trie, return nullptr.

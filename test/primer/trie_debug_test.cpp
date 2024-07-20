@@ -15,6 +15,29 @@
 
 namespace bustub {
 
+int GetChildrenCount(const std::shared_ptr<const TrieNode> &node) {
+  if (!node) {
+    return 0;
+  }
+  return node->children_.size();
+}
+
+std::shared_ptr<const TrieNode> GetNodeWithPrefix(const std::shared_ptr<const TrieNode> &root,
+                                                  const std::string &prefix) {
+  auto cur = root;
+  for (char c : prefix) {
+    if (!cur) {
+      return nullptr;
+    }
+    auto it = cur->children_.find(c);
+    if (it == cur->children_.end()) {
+      return nullptr;
+    }
+    cur = it->second;
+  }
+  return cur;
+}
+
 TEST(TrieDebugger, TestCase) {
   std::mt19937_64 gen(23333);
   zipfian_int_distribution<uint32_t> dis(0, 1000);
@@ -41,6 +64,12 @@ TEST(TrieDebugger, TestCase) {
   }
 
   // Put a breakpoint here.
+  // std::cout << "root children count " << GetChildrenCount(trie.GetRoot()) << std::endl;
+  // std::cout << "node of prefix `9` children "
+  //           << (GetNodeWithPrefix(trie.GetRoot(), "9") ? GetNodeWithPrefix(trie.GetRoot(), "9")->children_.size() :
+  //           0)
+  //           << std::endl;
+  // std::cout << "value for 969 " << (trie.Get<uint32_t>("969") ? *trie.Get<uint32_t>("969") : 0) << std::endl;
 
   // (1) How many children nodes are there on the root?
   // Replace `CASE_1_YOUR_ANSWER` in `trie_answer.h` with the correct answer.

@@ -14,6 +14,7 @@ template <class T>
 class ValueGuard {
  public:
   ValueGuard(Trie root, const T &value) : root_(std::move(root)), value_(value) {}
+  // override dereference operator
   auto operator*() const -> const T & { return value_; }
 
  private:
