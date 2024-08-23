@@ -228,12 +228,88 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
 
 auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
 
-auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard { return {this, nullptr}; }
+auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard {
+  std::lock_guard<std::recursive_mutex> guard(latch_);
+  Page *page = nullptr;
 
-auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard { return {this, nullptr}; }
+  if (page_id == INVALID_PAGE_ID) {
+    return {};
+  }
 
-auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard { return {this, nullptr}; }
+  if (page_table_.find(page_id) != page_table_.end()) {
+    frame_id_t frame_id = page_table_[page_id];
+    page = &pages_[frame_id];
+    page->pin_count_++;
+    replacer_->RecordAccess(frame_id);
+    replacer_->SetEvictable(frame_id, false);
+  } else {
+    if (free_list_.empty() && replacer_->Size() == 0) {
+      return {};
+    }
 
-auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard { return {this, nullptr}; }
+    frame_id_t frame_id;
+    if (!free_list_.empty()) {
+      frame_id = free_list_.front();
+      free_list_.pop_front();
+    } else {
+      if (!replacer_->Evict(&frame_id)) {
+        return {};
+      }
+
+      if (pages_[frame_id].is_dirty_) {
+        FlushPage(pages_[frame_id].GetPageId());
+      }
+
+      page_table_.erase(pages_[frame_id].GetPageId());
+    }
+
+    auto promise = disk_scheduler_->CreatePromise();
+    auto future = promise.get_future();
+    DiskRequest read_request = {false, pages_[frame_id].GetData(), page_id, std::move(promise)};
+    disk_scheduler_->Schedule(std::move(read_request));
+    future.get();
+
+    page = &pages_[frame_id];
+    page->page_id_ = page_id;
+    page->pin_count_ = 1;
+    page->is_dirty_ = false;
+    page_table_[page_id] = frame_id;
+
+    replacer_->RecordAccess(frame_id);
+    replacer_->SetEvictable(frame_id, false);
+  }
+
+  return {BasicPageGuard(this, page)};
+}
+
+auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
+  if (page_id == INVALID_PAGE_ID) {
+    return {};
+  }
+  BasicPageGuard basic_guard = FetchPageBasic(page_id);
+  if (basic_guard.GetData() == nullptr) {
+    return {};
+  }
+  return basic_guard.UpgradeRead();
+}
+
+auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
+  if (page_id == INVALID_PAGE_ID) {
+    return {};
+  }
+  BasicPageGuard basic_guard = FetchPageBasic(page_id);
+  if (basic_guard.GetData() == nullptr) {
+    return {};
+  }
+  return basic_guard.UpgradeWrite();
+}
+
+auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard {
+  Page *page = NewPage(page_id);
+  if (page != nullptr) {
+    return {BasicPageGuard(this, page)};
+  }
+  return {};
+}
 
 }  // namespace bustub

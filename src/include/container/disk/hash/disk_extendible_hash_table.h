@@ -110,6 +110,8 @@ class DiskExtendibleHashTable {
    */
   auto Hash(K key) const -> uint32_t;
 
+  auto Split(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx, WritePageGuard &&old_bucket_guard) -> bool;
+
   auto InsertToNewDirectory(ExtendibleHTableHeaderPage *header, uint32_t directory_idx, uint32_t hash, const K &key,
                             const V &value) -> bool;
 
@@ -122,6 +124,8 @@ class DiskExtendibleHashTable {
   void MigrateEntries(ExtendibleHTableBucketPage<K, V, KC> *old_bucket,
                       ExtendibleHTableBucketPage<K, V, KC> *new_bucket, uint32_t new_bucket_idx,
                       uint32_t local_depth_mask);
+
+  void MergeBuckets(ExtendibleHTableDirectoryPage *directory, WritePageGuard &&bucket_guard, uint32_t bucket_idx);
 
   // member variables
   std::string index_name_;

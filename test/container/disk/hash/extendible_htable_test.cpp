@@ -23,7 +23,7 @@
 namespace bustub {
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_InsertTest1) {
+TEST(ExtendibleHTableTest, InsertTest1) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
 
@@ -48,7 +48,7 @@ TEST(ExtendibleHTableTest, DISABLED_InsertTest1) {
 }
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_InsertTest2) {
+TEST(ExtendibleHTableTest, InsertTest2) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
 
@@ -91,7 +91,7 @@ TEST(ExtendibleHTableTest, DISABLED_InsertTest2) {
 }
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_RemoveTest1) {
+TEST(ExtendibleHTableTest, RemoveTest1) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
 
@@ -154,6 +154,109 @@ TEST(ExtendibleHTableTest, DISABLED_RemoveTest1) {
   }
 
   ht.VerifyIntegrity();
+}
+
+TEST(ExtendibleHTableTest, RemoveTest2) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 1, 2, 2);
+
+  bool inserted = ht.Insert(4, 4);
+  ASSERT_TRUE(inserted);
+  inserted = ht.Insert(5, 5);
+  ASSERT_TRUE(inserted);
+  inserted = ht.Insert(6, 6);
+  ASSERT_TRUE(inserted);
+  inserted = ht.Insert(14, 14);
+  ASSERT_TRUE(inserted);
+  bool removed = ht.Remove(5);
+  ASSERT_TRUE(removed);
+  removed = ht.Remove(14);
+  ASSERT_TRUE(removed);
+  removed = ht.Remove(4);
+  ASSERT_TRUE(removed);
+
+  ht.VerifyIntegrity();
+}
+
+TEST(ExtendibleHTableTest, RemoveTestExtreme) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+
+  // 初始化HashTable，限制最大目录深度为2，全局深度初始为0，桶容量为2
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 0, 2, 2);
+
+  int num_keys = 8;
+
+  // 插入多于桶容量的数据，触发分裂
+  for (int i = 0; i < num_keys; i++) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+  }
+
+  ht.VerifyIntegrity();
+  LOG_DEBUG("Insertion done");
+  ht.PrintHT();
+
+  // 删除所有键值对，触发合并
+  for (int i = 0; i < num_keys; i++) {
+    bool removed = ht.Remove(i);
+    ASSERT_TRUE(removed);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+    LOG_DEBUG("after remove %d", i);
+    ht.PrintHT();
+  }
+
+  ht.VerifyIntegrity();
+  LOG_DEBUG("Removal done");
+  ht.PrintHT();
+
+  // 再次插入和删除，验证HashTable在经历了分裂和合并后的行为
+  for (int i = 0; i < num_keys; i++) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+    LOG_DEBUG("after insert %d", i);
+    ht.PrintHT();
+    res.clear();
+    bool removed = ht.Remove(i);
+    ASSERT_TRUE(removed);
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
+
+  ht.VerifyIntegrity();
+  LOG_DEBUG("Insertion and removal done");
+  ht.PrintHT();
+
+  // 插入和删除边界值，验证是否会导致溢出或其他问题
+  std::vector<int> extreme_keys = {INT_MIN, INT_MAX, -1, 0, 1};
+  for (int key : extreme_keys) {
+    bool inserted = ht.Insert(key, key);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(key, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(key, res[0]);
+    res.clear();
+    bool removed = ht.Remove(key);
+    ASSERT_TRUE(removed);
+    ht.GetValue(key, &res);
+    ASSERT_EQ(0, res.size());
+  }
+
+  ht.VerifyIntegrity();
+  LOG_DEBUG("Insertion and removal of extreme keys done");
 }
 
 }  // namespace bustub

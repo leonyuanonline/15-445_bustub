@@ -37,6 +37,7 @@ namespace bustub {
 
 static constexpr uint64_t HTABLE_BUCKET_PAGE_METADATA_SIZE = sizeof(uint32_t) * 2;
 
+// mapping_type_size = sizeof(KeyType) + sizeof(ValueType)
 constexpr auto HTableBucketArraySize(uint64_t mapping_type_size) -> uint64_t {
   return (BUSTUB_PAGE_SIZE - HTABLE_BUCKET_PAGE_METADATA_SIZE) / mapping_type_size;
 };
