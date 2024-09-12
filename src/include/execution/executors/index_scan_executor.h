@@ -44,5 +44,15 @@ class IndexScanExecutor : public AbstractExecutor {
  private:
   /** The index scan plan node to be executed. */
   const IndexScanPlanNode *plan_;
+  /** The table info for the table to be scanned. */
+  const TableInfo *table_info_{nullptr};
+
+  /** The hash table index being scanned. */
+  HashTableIndexForTwoIntegerColumn *htable_{nullptr};
+
+  /** The iterator over the RIDs returned by the index scan. */
+  std::vector<RID> result_rids_;
+  std::vector<RID>::iterator iter_;
+  std::vector<RID>::iterator end_;
 };
 }  // namespace bustub

@@ -63,5 +63,12 @@ class TopNExecutor : public AbstractExecutor {
   const TopNPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  /** Container to store top N tuples */
+  using TupleWithRID = std::pair<Tuple, RID>;
+  std::vector<TupleWithRID> topn_tuples_;
+
+  /** Iterator to return tuples */
+  std::vector<TupleWithRID>::iterator topn_tuples_iter_;
 };
 }  // namespace bustub
