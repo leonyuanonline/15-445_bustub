@@ -170,12 +170,25 @@ TEST(ExtendibleHTableTest, RemoveTest2) {
   ASSERT_TRUE(inserted);
   inserted = ht.Insert(14, 14);
   ASSERT_TRUE(inserted);
+  ht.PrintHT();
   bool removed = ht.Remove(5);
   ASSERT_TRUE(removed);
   removed = ht.Remove(14);
   ASSERT_TRUE(removed);
   removed = ht.Remove(4);
   ASSERT_TRUE(removed);
+  // print the global depth
+  ht.PrintHT();
+}
+
+TEST(ExtendibleHTableTest, RemoveTest3) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 1, 2, 2);
+
+  bool removed = ht.Remove(0);
+  ASSERT_FALSE(removed);
 
   ht.VerifyIntegrity();
 }
@@ -257,6 +270,33 @@ TEST(ExtendibleHTableTest, RemoveTestExtreme) {
 
   ht.VerifyIntegrity();
   LOG_DEBUG("Insertion and removal of extreme keys done");
+}
+
+TEST(ExtendibleHTableTest, GrowShrinkTest) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(3, disk_mgr.get());
+
+  // 初始化HashTable，限制最大目录深度为2，全局深度初始为0，桶容量为2
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 9, 9,
+                                                      511);
+
+  for (int i = 0; i < 512; i++) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+  }
+  ht.VerifyIntegrity();
+  for (int i = 0; i < 512; i++) {
+    bool removed = ht.Remove(i);
+    ASSERT_TRUE(removed);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
+  ht.VerifyIntegrity();
 }
 
 }  // namespace bustub

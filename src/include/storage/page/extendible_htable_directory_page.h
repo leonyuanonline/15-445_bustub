@@ -53,7 +53,7 @@ class ExtendibleHTableDirectoryPage {
    * method to set default values
    * @param max_depth Max depth in the directory page
    */
-  void Init(page_id_t page_id, uint32_t max_depth = HTABLE_DIRECTORY_MAX_DEPTH);
+  void Init(uint32_t max_depth = HTABLE_DIRECTORY_MAX_DEPTH);
 
   /**
    * Get the bucket index that the key is hashed to
@@ -196,14 +196,13 @@ class ExtendibleHTableDirectoryPage {
   uint32_t global_depth_;
   uint8_t local_depths_[HTABLE_DIRECTORY_ARRAY_SIZE];
   page_id_t bucket_page_ids_[HTABLE_DIRECTORY_ARRAY_SIZE];
-  page_id_t page_id_;
 };
 
 static_assert(sizeof(page_id_t) == 4);
 
-static_assert(sizeof(ExtendibleHTableDirectoryPage) ==
-              HTABLE_DIRECTORY_PAGE_METADATA_SIZE + HTABLE_DIRECTORY_ARRAY_SIZE +
-                  sizeof(page_id_t) * HTABLE_DIRECTORY_ARRAY_SIZE + sizeof(page_id_t));
+static_assert(sizeof(ExtendibleHTableDirectoryPage) == HTABLE_DIRECTORY_PAGE_METADATA_SIZE +
+                                                           HTABLE_DIRECTORY_ARRAY_SIZE +
+                                                           sizeof(page_id_t) * HTABLE_DIRECTORY_ARRAY_SIZE);
 
 static_assert(sizeof(ExtendibleHTableDirectoryPage) <= BUSTUB_PAGE_SIZE);
 

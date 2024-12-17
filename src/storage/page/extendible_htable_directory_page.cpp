@@ -20,8 +20,7 @@
 
 namespace bustub {
 
-void ExtendibleHTableDirectoryPage::Init(page_id_t page_id, uint32_t max_depth) {
-  page_id_ = page_id;
+void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   // 初始化最大深度
   max_depth_ = max_depth;
 
@@ -61,10 +60,7 @@ auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const
   return (1 << local_depths_[bucket_idx]) - 1;
 }
 
-auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t {
-  LOG_DEBUG("get page id %d global depth", page_id_);
-  return global_depth_;
-}
+auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return global_depth_; }
 
 auto ExtendibleHTableDirectoryPage::GetMaxDepth() const -> uint32_t { return max_depth_; }
 
@@ -100,12 +96,12 @@ void ExtendibleHTableDirectoryPage::Shrink() {
     uint32_t new_size = 1 << global_depth_;
     for (uint32_t i = 0; i < new_size; i++) {
       uint32_t split_image_idx = i + new_size;
-      if (bucket_page_ids_[split_image_idx] == bucket_page_ids_[i]) {
-        // 如果两者是指向相同桶的映像，那么我们减少局部深度
-        if (local_depths_[i] > 0) {
-          local_depths_[i]--;
-        }
-      }
+      // if (bucket_page_ids_[split_image_idx] == bucket_page_ids_[i]) {
+      //   // 如果两者是指向相同桶的映像，那么我们减少局部深度
+      //   if (local_depths_[i] > 0) {
+      //     local_depths_[i]--;
+      //   }
+      // }
       // 统一指向一个桶
       bucket_page_ids_[split_image_idx] = bucket_page_ids_[i];
       local_depths_[split_image_idx] = local_depths_[i];
