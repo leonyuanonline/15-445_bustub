@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "concurrency/transaction_manager.h"
 #include "execution/executors/insert_executor.h"
 #include "type/value_factory.h"
 
@@ -44,6 +45,14 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   // 获取表的所有索引
   auto indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 
+  // 获取当前事务
+  auto txn = exec_ctx_->GetTransaction();
+  auto txn_id = txn->GetTransactionId();
+  auto txn_tmp_ts = TXN_START_ID | (txn_id - TXN_START_ID);
+  auto txn_mgr = exec_ctx_->GetTransactionManager();
+
+  LOG_DEBUG("txn_id = %ld, txn_tmp_ts = %ld", txn_id, txn_tmp_ts);
+
   // 从子执行器获取要插入的元组
   Tuple child_tuple;
   RID child_rid;
@@ -51,16 +60,18 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     std::cout << "Retrieved tuple: " << child_tuple.ToString(&table_info_->schema_) << std::endl;
     TupleMeta meta{};
     meta.is_deleted_ = false;
-    meta.ts_ = 0;  // 对于项目3，时间戳设置为0
+    meta.ts_ = txn_tmp_ts;  // 设置为事务的临时时间戳
+
+    // 下一个版本链接设置为 nullopt
 
     // 将元组插入表中
-    auto insert_rid =
-        table_info_->table_->InsertTuple(meta, child_tuple, exec_ctx_->GetLockManager(), exec_ctx_->GetTransaction());
+    auto insert_rid = table_info_->table_->InsertTuple(meta, child_tuple, exec_ctx_->GetLockManager(), txn);
 
     if (!insert_rid.has_value()) {
       throw std::runtime_error("Failed to insert tuple.");
     }
 
+    txn->AppendWriteSet(table_info_->oid_, insert_rid.value());
     // 更新所有相关的索引
     for (const auto &index_info : indexes) {
       auto key_tuple =
@@ -68,6 +79,13 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       index_info->index_->InsertEntry(key_tuple, insert_rid.value(), exec_ctx_->GetTransaction());
     }
 
+    txn_mgr->UpdateUndoLink(insert_rid.value(), std::nullopt, nullptr);
+
+    auto version_link = txn_mgr->GetVersionLink(insert_rid.value());
+    LOG_DEBUG("version_link is valid %d", version_link.has_value());
+    auto undo_link = version_link->prev_;
+    fmt::println("RID={}/{}", insert_rid.value().GetPageId(), insert_rid.value().GetSlotNum());
+    LOG_DEBUG("undo_link is valid %d", undo_link.IsValid());
     rows_inserted++;
   }
   LOG_DEBUG("rows inserted %d", rows_inserted);
