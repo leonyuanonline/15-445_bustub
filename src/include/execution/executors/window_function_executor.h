@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <utility>
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/window_plan.h"

@@ -40,17 +40,18 @@ BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
 
 auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   std::lock_guard<std::recursive_mutex> guard(latch_);
+
   if (free_list_.empty() && replacer_->Size() == 0) {
-    printf("no free page\n");
+    throw Exception("no free page");
     return nullptr;
   }
+
   frame_id_t frame_id;
   if (!free_list_.empty()) {
     frame_id = free_list_.front();
     free_list_.pop_front();
   } else {
     if (!replacer_->Evict(&frame_id)) {
-      printf("evict frame false, no free page\n");
       return nullptr;
     }
 
@@ -74,6 +75,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   std::lock_guard<std::recursive_mutex> guard(latch_);
+
   if (page_table_.find(page_id) != page_table_.end()) {
     frame_id_t frame_id = page_table_[page_id];
     Page &page = pages_[frame_id];

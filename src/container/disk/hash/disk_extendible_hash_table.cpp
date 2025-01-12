@@ -71,8 +71,8 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
  * SEARCH
  *****************************************************************************/
 template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *result, Transaction *transaction) const
-    -> bool {
+auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *result,
+                                                 Transaction *transaction) const -> bool {
   uint32_t hash = Hash(key);
 
   // fetch header page
@@ -256,7 +256,7 @@ template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::InsertToNewDirectory(ExtendibleHTableHeaderPage *header, uint32_t directory_idx,
                                                              uint32_t hash, const K &key, const V &value) -> bool {
   header_max_depth_++;
-  for (uint32_t i = 0; i < (1 << header_max_depth_); i++) {
+  for (uint32_t i = 0; i < (1U << header_max_depth_); i++) {
     page_id_t dir_page_id = header->GetDirectoryPageId(i);
     header->SetDirectoryPageId(i + (1 << header_max_depth_), dir_page_id);
   }

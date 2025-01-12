@@ -56,8 +56,7 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const AbstractPlanNodeRef &plan) -> A
                 table_oid,                                                      // 表 OID
                 index_info->index_oid_,                                         // 索引 OID
                 filter_predicate,                                               // 过滤谓词
-                dynamic_cast<ConstantValueExpression *>(right_expr.get())       // 常量键
-            );
+                dynamic_cast<ConstantValueExpression *>(right_expr.get()));     // 常量键
 
             return index_scan_plan;
           }
